@@ -12,6 +12,7 @@ import { notFound } from "./middlewares/notFound.middleware.js";
 import projectRoutes from "./routes/project.routes.js";
 import taskRoutes from "./routes/task.routes.js";
 import commentRoutes from "./routes/comment.routes.js";
+import notificationRoutes from "./routes/notification.routes.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
 
 const app = express();
@@ -42,6 +43,7 @@ app.use("/api/v1", projectRoutes);
 app.use("/api/v1", taskRoutes);
 app.use("/api/v1", commentRoutes);
 app.use("/api/v1/organizations", organizationRoutes);
+app.use("/api/v1/notifications", notificationRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
