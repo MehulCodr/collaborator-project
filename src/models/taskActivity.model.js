@@ -40,7 +40,10 @@ const taskActivitySchema = new mongoose.Schema(
         "due_date_updated",
         "subtask_added",
         "subtask_updated",
-        "subtask_deleted"
+        "subtask_deleted",
+        "comment_added",
+        "comment_updated",
+        "comment_deleted"
       ]
     },
     metadata: {

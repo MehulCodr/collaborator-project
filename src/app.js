@@ -11,6 +11,7 @@ import organizationRoutes from "./routes/organization.routes.js";
 import { notFound } from "./middlewares/notFound.middleware.js";
 import projectRoutes from "./routes/project.routes.js";
 import taskRoutes from "./routes/task.routes.js";
+import commentRoutes from "./routes/comment.routes.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
 
 const app = express();
@@ -39,6 +40,7 @@ app.use("/api/v1/health", healthRoutes);
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1", projectRoutes);
 app.use("/api/v1", taskRoutes);
+app.use("/api/v1", commentRoutes);
 app.use("/api/v1/organizations", organizationRoutes);
 
 app.use(notFound);
