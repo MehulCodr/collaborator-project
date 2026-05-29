@@ -6,9 +6,11 @@ import morgan from "morgan";
 import rateLimit from "express-rate-limit";
 import { env } from "./config/env.js";
 import healthRoutes from "./routes/health.routes.js";
+import authRoutes from "./routes/auth.routes.js";
+import organizationRoutes from "./routes/organization.routes.js";
 import { notFound } from "./middlewares/notFound.middleware.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
-import authRoutes from "./routes/auth.routes.js";
+
 const app = express();
 
 const limiter = rateLimit({
@@ -32,8 +34,9 @@ app.use(morgan(env.nodeEnv === "development" ? "dev" : "combined"));
 app.use(limiter);
 
 app.use("/api/v1/health", healthRoutes);
-
 app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/organizations", organizationRoutes);
+
 app.use(notFound);
 app.use(errorHandler);
 
