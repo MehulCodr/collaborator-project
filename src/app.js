@@ -12,6 +12,7 @@ import { notFound } from "./middlewares/notFound.middleware.js";
 import projectRoutes from "./routes/project.routes.js";
 import taskRoutes from "./routes/task.routes.js";
 import commentRoutes from "./routes/comment.routes.js";
+import attachmentRoutes from "./routes/attachment.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
 
@@ -36,12 +37,14 @@ app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(cookieParser());
 app.use(morgan(env.nodeEnv === "development" ? "dev" : "combined"));
 app.use(limiter);
+app.use("/uploads", express.static("uploads"));
 
 app.use("/api/v1/health", healthRoutes);
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1", projectRoutes);
 app.use("/api/v1", taskRoutes);
 app.use("/api/v1", commentRoutes);
+app.use("/api/v1", attachmentRoutes);
 app.use("/api/v1/organizations", organizationRoutes);
 app.use("/api/v1/notifications", notificationRoutes);
 
