@@ -16,6 +16,7 @@ import attachmentRoutes from "./routes/attachment.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
 import analyticsRoutes from "./routes/analytics.routes.js";
+import githubRoutes from "./routes/github.routes.js";
 
 const app = express();
 
@@ -48,6 +49,7 @@ app.use("/api/v1", commentRoutes);
 app.use("/api/v1", attachmentRoutes);
 app.use("/api/v1/organizations", organizationRoutes);
 app.use("/api/v1/notifications", notificationRoutes);
+app.use("/api/v1/github", githubRoutes);
 app.use("/api/v1/analytics", analyticsRoutes);
 
 app.use(notFound);
