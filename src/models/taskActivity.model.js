@@ -45,7 +45,8 @@ const taskActivitySchema = new mongoose.Schema(
                 "comment_updated",
                 "comment_deleted",
                 "attachment_uploaded",
-                "attachment_deleted"
+                "attachment_deleted",
+                "github_issue_linked"
             ]
         },
         metadata: {

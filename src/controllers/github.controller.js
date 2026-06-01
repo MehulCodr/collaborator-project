@@ -13,8 +13,15 @@ import {
   getAuthenticatedGithubUser,
   getGithubRepoByFullName,
   getGithubRepoIssues,
-  getGithubRepoPulls
+  getGithubRepoPulls,
+  getGithubIssueByNumber
 } from "../services/github.service.js";
+import mongoose from "mongoose";
+import { Task } from "../models/task.model.js";
+import { TaskActivity } from "../models/taskActivity.model.js";
+import { ProjectMember } from "../models/projectMember.model.js";
+import { GithubTaskLink } from "../models/githubTaskLink.model.js";
+import { notifyTaskAssigned } from "../services/notification.service.js";
 
 const oauthCookieOptions = {
   httpOnly: true,
@@ -259,4 +266,261 @@ export const getRepositoryPulls = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(new ApiResponse(200, { pulls }, "GitHub pull requests fetched successfully"));
+});
+
+const createTaskActivity = async ({ task, project, organization, user, action, metadata = {}, session }) => {
+  const payload = [
+    {
+      task,
+      project,
+      organization,
+      user,
+      action,
+      metadata
+    }
+  ];
+
+  if (session) {
+    await TaskActivity.create(payload, { session });
+    return;
+  }
+
+  await TaskActivity.create(payload);
+};
+
+const normalizeGithubLabels = (labels = []) => {
+  return labels
+    .map((label) => label.name?.toString().trim().toLowerCase())
+    .filter(Boolean);
+};
+
+const ensureAssigneeIsProjectMember = async ({ assignedTo, projectId }) => {
+  if (!assignedTo) {
+    return;
+  }
+
+  const projectMember = await ProjectMember.findOne({
+    user: assignedTo,
+    project: projectId,
+    status: "active"
+  });
+
+  if (!projectMember) {
+    throw new ApiError(400, "Assigned user must be an active project member");
+  }
+};
+
+export const createTaskFromGithubIssue = asyncHandler(async (req, res) => {
+  const { repositoryId, issueNumber } = req.params;
+  const {
+    assignedTo = null,
+    priority = "medium",
+    status = "todo",
+    extraLabels = []
+  } = req.body;
+
+  validateMongoId(repositoryId, "repository id");
+
+  if (!["low", "medium", "high", "urgent"].includes(priority)) {
+    throw new ApiError(400, "Invalid task priority");
+  }
+
+  if (!["backlog", "todo", "in-progress", "review", "completed"].includes(status)) {
+    throw new ApiError(400, "Invalid task status");
+  }
+
+  if (assignedTo) {
+    validateMongoId(assignedTo, "assigned user id");
+
+    await ensureAssigneeIsProjectMember({
+      assignedTo,
+      projectId: req.project._id
+    });
+  }
+
+  const repository = await GithubRepository.findOne({
+    _id: repositoryId,
+    project: req.project._id
+  });
+
+  if (!repository) {
+    throw new ApiError(404, "GitHub repository not found for this project");
+  }
+
+  const existingLink = await GithubTaskLink.findOne({
+    repository: repository._id,
+    issueNumber: Number(issueNumber)
+  }).populate("task", "title status priority");
+
+  if (existingLink) {
+    throw new ApiError(409, "A task already exists for this GitHub issue");
+  }
+
+  const { token } = await getGithubTokenForUser(req.user._id);
+
+  const issue = await getGithubIssueByNumber({
+    token,
+    owner: repository.owner,
+    repo: repository.name,
+    issueNumber
+  });
+
+  const githubLabels = normalizeGithubLabels(issue.labels);
+  const labels = [
+    ...new Set([
+      "github",
+      "issue",
+      ...githubLabels,
+      ...extraLabels.map((label) => label.toString().trim().toLowerCase()).filter(Boolean)
+    ])
+  ];
+
+  const description = [
+    issue.body || "No GitHub issue description provided.",
+    "",
+    `GitHub issue: ${issue.html_url}`,
+    `Repository: ${repository.fullName}`,
+    `Issue number: #${issue.number}`,
+    `State: ${issue.state}`
+  ].join("\n");
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const [task] = await Task.create(
+      [
+        {
+          title: issue.title,
+          description,
+          project: req.project._id,
+          organization: req.project.organization,
+          createdBy: req.user._id,
+          assignedTo,
+          status,
+          priority,
+          dueDate: null,
+          labels
+        }
+      ],
+      { session }
+    );
+
+    const [link] = await GithubTaskLink.create(
+      [
+        {
+          organization: req.project.organization,
+          project: req.project._id,
+          task: task._id,
+          repository: repository._id,
+          createdBy: req.user._id,
+          githubIssueId: issue.id,
+          issueNumber: issue.number,
+          issueTitle: issue.title,
+          issueUrl: issue.html_url,
+          issueState: issue.state,
+          labels: githubLabels
+        }
+      ],
+      { session }
+    );
+
+    await createTaskActivity({
+      task: task._id,
+      project: task.project,
+      organization: task.organization,
+      user: req.user._id,
+      action: "task_created",
+      metadata: {
+        source: "github_issue",
+        repository: repository.fullName,
+        issueNumber: issue.number,
+        issueUrl: issue.html_url
+      },
+      session
+    });
+
+    await createTaskActivity({
+      task: task._id,
+      project: task.project,
+      organization: task.organization,
+      user: req.user._id,
+      action: "github_issue_linked",
+      metadata: {
+        repositoryId: repository._id,
+        githubTaskLinkId: link._id,
+        repository: repository.fullName,
+        issueNumber: issue.number,
+        issueUrl: issue.html_url
+      },
+      session
+    });
+
+    if (assignedTo) {
+      await createTaskActivity({
+        task: task._id,
+        project: task.project,
+        organization: task.organization,
+        user: req.user._id,
+        action: "task_assigned",
+        metadata: {
+          assignedTo,
+          source: "github_issue"
+        },
+        session
+      });
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+
+    if (assignedTo) {
+      await notifyTaskAssigned({
+        task,
+        actor: req.user._id,
+        assignedTo
+      });
+    }
+
+    const populatedTask = await Task.findById(task._id)
+      .populate("createdBy", "name email avatar")
+      .populate("assignedTo", "name email avatar");
+
+    const populatedLink = await GithubTaskLink.findById(link._id).populate(
+      "repository",
+      "fullName htmlUrl"
+    );
+
+    return res.status(201).json(
+      new ApiResponse(
+        201,
+        {
+          task: populatedTask,
+          githubLink: populatedLink
+        },
+        "Task created from GitHub issue successfully"
+      )
+    );
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    throw error;
+  }
+});
+
+export const getTaskGithubLinks = asyncHandler(async (req, res) => {
+  const { taskId } = req.params;
+
+  validateMongoId(taskId, "task id");
+
+  const links = await GithubTaskLink.find({
+    task: taskId
+  })
+    .populate("repository", "fullName htmlUrl defaultBranch private")
+    .populate("createdBy", "name email avatar")
+    .sort({ createdAt: -1 });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, { links }, "Task GitHub links fetched successfully"));
 });

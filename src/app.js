@@ -17,6 +17,7 @@ import notificationRoutes from "./routes/notification.routes.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
 import analyticsRoutes from "./routes/analytics.routes.js";
 import githubRoutes from "./routes/github.routes.js";
+import aiRoutes from "./routes/ai.routes.js";
 
 const app = express();
 
@@ -45,6 +46,7 @@ app.use("/api/v1/health", healthRoutes);
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1", projectRoutes);
 app.use("/api/v1", taskRoutes);
+app.use("/api/v1/ai", aiRoutes);
 app.use("/api/v1", commentRoutes);
 app.use("/api/v1", attachmentRoutes);
 app.use("/api/v1/organizations", organizationRoutes);

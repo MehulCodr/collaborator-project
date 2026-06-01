@@ -91,3 +91,15 @@ export const getGithubRepoPulls = async ({ token, owner, repo }) => {
     endpoint: `/repos/${owner}/${repo}/pulls?state=all&per_page=50&sort=updated&direction=desc`
   });
 };
+export const getGithubIssueByNumber = async ({ token, owner, repo, issueNumber }) => {
+  const issue = await githubRequest({
+    token,
+    endpoint: `/repos/${owner}/${repo}/issues/${issueNumber}`
+  });
+
+  if (issue.pull_request) {
+    throw new ApiError(400, "This GitHub item is a pull request, not an issue");
+  }
+
+  return issue;
+};

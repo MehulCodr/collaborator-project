@@ -1,11 +1,13 @@
 import { Router } from "express";
 import {
   connectRepositoryToProject,
+  createTaskFromGithubIssue,
   getGithubRepositories,
   getGithubStatus,
   getProjectGithubRepositories,
   getRepositoryIssues,
   getRepositoryPulls,
+  getTaskGithubLinks,
   handleGithubCallback,
   startGithubOAuth
 } from "../controllers/github.controller.js";
@@ -39,6 +41,18 @@ router.get(
   }),
   getProjectGithubRepositories
 );
+
+router.post(
+  "/projects/:projectId/repositories/:repositoryId/issues/:issueNumber/create-task",
+  requireProjectAccess({
+    orgRoles: ["owner", "admin"],
+    projectRoles: ["manager", "developer"]
+  }),
+  createTaskFromGithubIssue
+);
+
+
+router.get("/tasks/:taskId/links", getTaskGithubLinks);
 
 router.get("/repositories/:repositoryId/issues", getRepositoryIssues);
 router.get("/repositories/:repositoryId/pulls", getRepositoryPulls);

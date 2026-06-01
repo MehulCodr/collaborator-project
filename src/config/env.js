@@ -14,6 +14,7 @@ const requiredEnvVars = [
   "GITHUB_CLIENT_SECRET",
   "GITHUB_CALLBACK_URL",
   "FRONTEND_URL",
+  "OPENAI_API_KEY",
   "GITHUB_TOKEN_ENCRYPTION_SECRET"
 ];
 
@@ -36,5 +37,7 @@ export const env = {
   githubClientSecret: process.env.GITHUB_CLIENT_SECRET,
   githubCallbackUrl: process.env.GITHUB_CALLBACK_URL,
   frontendUrl: process.env.FRONTEND_URL,
-  githubTokenEncryptionSecret: process.env.GITHUB_TOKEN_ENCRYPTION_SECRET
+  githubTokenEncryptionSecret: process.env.GITHUB_TOKEN_ENCRYPTION_SECRET,
+  openaiApiKey: process.env.OPENAI_API_KEY,
+  openaiModel: process.env.OPENAI_MODEL || "gpt-4o-mini"
 };
