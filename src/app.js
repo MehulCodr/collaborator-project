@@ -17,6 +17,7 @@ import notificationRoutes from "./routes/notification.routes.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
 import analyticsRoutes from "./routes/analytics.routes.js";
 import githubRoutes from "./routes/github.routes.js";
+import githubWebhookRoutes from "./routes/githubWebhook.routes.js";
 import aiRoutes from "./routes/ai.routes.js";
 
 const app = express();
@@ -27,7 +28,6 @@ const limiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false
 });
-
 app.use(helmet());
 app.use(
   cors({
@@ -35,6 +35,16 @@ app.use(
     credentials: true
   })
 );
+
+app.use(
+  "/api/v1/github/webhook",
+  express.raw({
+    type: "application/json",
+    limit: "1mb"
+  }),
+  githubWebhookRoutes
+);
+
 app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(cookieParser());

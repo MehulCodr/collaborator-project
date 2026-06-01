@@ -15,7 +15,8 @@ const requiredEnvVars = [
   "GITHUB_CALLBACK_URL",
   "FRONTEND_URL",
   "OPENAI_API_KEY",
-  "GITHUB_TOKEN_ENCRYPTION_SECRET"
+  "GITHUB_TOKEN_ENCRYPTION_SECRET",
+  "GITHUB_WEBHOOK_SECRET"
 ];
 
 requiredEnvVars.forEach((key) => {
@@ -39,5 +40,6 @@ export const env = {
   frontendUrl: process.env.FRONTEND_URL,
   githubTokenEncryptionSecret: process.env.GITHUB_TOKEN_ENCRYPTION_SECRET,
   openaiApiKey: process.env.OPENAI_API_KEY,
-  openaiModel: process.env.OPENAI_MODEL || "gpt-4o-mini"
+  openaiModel: process.env.OPENAI_MODEL || "gpt-4o-mini",
+  githubWebhookSecret: process.env.GITHUB_WEBHOOK_SECRET
 };
