@@ -19,6 +19,7 @@ import analyticsRoutes from "./routes/analytics.routes.js";
 import githubRoutes from "./routes/github.routes.js";
 import githubWebhookRoutes from "./routes/githubWebhook.routes.js";
 import aiRoutes from "./routes/ai.routes.js";
+import ragRoutes from "./routes/rag.routes.js";
 
 const app = express();
 
@@ -62,6 +63,7 @@ app.use("/api/v1", attachmentRoutes);
 app.use("/api/v1/organizations", organizationRoutes);
 app.use("/api/v1/notifications", notificationRoutes);
 app.use("/api/v1/github", githubRoutes);
+app.use("/api/v1/rag", ragRoutes);
 app.use("/api/v1/analytics", analyticsRoutes);
 
 app.use(notFound);
