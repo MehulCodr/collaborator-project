@@ -30,9 +30,25 @@ const limiter = rateLimit({
   legacyHeaders: false
 });
 app.use(helmet());
+const allowedOrigins = env.corsOrigin
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+if (env.nodeEnv === "production") {
+  app.set("trust proxy", 1);
+}
+
 app.use(
   cors({
-    origin: env.corsOrigin,
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error("Not allowed by CORS"));
+    },
     credentials: true
   })
 );

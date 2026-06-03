@@ -31,7 +31,7 @@ requiredEnvVars.forEach((key) => {
 
 export const env = {
   nodeEnv: process.env.NODE_ENV || "development",
-  port: process.env.PORT,
+  port: process.env.PORT || 8000,
   mongoUri: process.env.MONGODB_URI,
   corsOrigin: process.env.CORS_ORIGIN,
   jwtAccessSecret: process.env.JWT_ACCESS_SECRET,

@@ -11,21 +11,41 @@ const cookieOptions = {
   sameSite: env.nodeEnv === "production" ? "none" : "lax"
 };
 
-const generateAccessAndRefreshTokens = async (userId) => {
-  const user = await User.findById(userId);
+const getCookieOptions = (maxAge) => {
+  return {
+    httpOnly: true,
+    secure: env.nodeEnv === "production",
+    sameSite: env.nodeEnv === "production" ? "none" : "lax",
+    maxAge
+  };
+};
 
-  if (!user) {
-    throw new ApiError(404, "User not found");
-  }
+const accessTokenCookieOptions = getCookieOptions(15 * 60 * 1000);
+const refreshTokenCookieOptions = getCookieOptions(7 * 24 * 60 * 60 * 1000);
+
+const generateAccessAndRefreshTokens = async (userId) => {
+  const user = await User.findById(userId).select("+refreshToken");
 
   const accessToken = user.generateAccessToken();
   const refreshToken = user.generateRefreshToken();
 
   user.refreshToken = refreshToken;
-  await user.save({ validateBeforeSave: false });
+  await user.save({
+    validateBeforeSave: false
+  });
 
-  return { accessToken, refreshToken };
+  return {
+    accessToken,
+    refreshToken
+  };
 };
+
+const sendAuthCookies = ({ res, accessToken, refreshToken }) => {
+  res.cookie("accessToken", accessToken, accessTokenCookieOptions);
+  res.cookie("refreshToken", refreshToken, refreshTokenCookieOptions);
+};
+
+
 
 export const registerUser = asyncHandler(async (req, res) => {
   const { name, email, password } = req.body;
@@ -34,14 +54,12 @@ export const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Name, email and password are required");
   }
 
-  if (password.length < 8) {
-    throw new ApiError(400, "Password must be at least 8 characters long");
-  }
-
-  const existingUser = await User.findOne({ email: email.toLowerCase() });
+  const existingUser = await User.findOne({
+    email: email.toLowerCase()
+  });
 
   if (existingUser) {
-    throw new ApiError(409, "User with this email already exists");
+    throw new ApiError(409, "User already exists with this email");
   }
 
   const user = await User.create({
@@ -50,11 +68,27 @@ export const registerUser = asyncHandler(async (req, res) => {
     password
   });
 
+  const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(user._id);
+
   const createdUser = await User.findById(user._id).select("-password -refreshToken");
 
-  return res
-    .status(201)
-    .json(new ApiResponse(201, { user: createdUser }, "User registered successfully"));
+  sendAuthCookies({
+    res,
+    accessToken,
+    refreshToken
+  });
+
+  return res.status(201).json(
+    new ApiResponse(
+      201,
+      {
+        user: createdUser,
+        accessToken,
+        refreshToken
+      },
+      "User registered and logged in successfully"
+    )
+  );
 });
 
 export const loginUser = asyncHandler(async (req, res) => {
@@ -64,7 +98,9 @@ export const loginUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Email and password are required");
   }
 
-  const user = await User.findOne({ email: email.toLowerCase() }).select("+password +refreshToken");
+  const user = await User.findOne({
+    email: email.toLowerCase()
+  }).select("+password +refreshToken");
 
   if (!user) {
     throw new ApiError(401, "Invalid email or password");
@@ -80,21 +116,23 @@ export const loginUser = asyncHandler(async (req, res) => {
 
   const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
 
-  return res
-    .status(200)
-    .cookie("accessToken", accessToken, cookieOptions)
-    .cookie("refreshToken", refreshToken, cookieOptions)
-    .json(
-      new ApiResponse(
-        200,
-        {
-          user: loggedInUser,
-          accessToken,
-          refreshToken
-        },
-        "User logged in successfully"
-      )
-    );
+  sendAuthCookies({
+    res,
+    accessToken,
+    refreshToken
+  });
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        user: loggedInUser,
+        accessToken,
+        refreshToken
+      },
+      "User logged in successfully"
+    )
+  );
 });
 
 export const logoutUser = asyncHandler(async (req, res) => {
@@ -112,8 +150,8 @@ export const logoutUser = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .clearCookie("accessToken", cookieOptions)
-    .clearCookie("refreshToken", cookieOptions)
+    .clearCookie("accessToken", accessTokenCookieOptions)
+    .clearCookie("refreshToken", refreshTokenCookieOptions)
     .json(new ApiResponse(200, {}, "User logged out successfully"));
 });
 
