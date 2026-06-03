@@ -1,4 +1,3 @@
-import fs from "fs/promises";
 import mongoose from "mongoose";
 import { TaskAttachment } from "../models/taskAttachment.model.js";
 import { TaskActivity } from "../models/taskActivity.model.js";
@@ -6,6 +5,10 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { validateMongoId } from "../utils/validateMongoId.js";
+import {
+  deleteFromCloudinary,
+  uploadBufferToCloudinary
+} from "../services/cloudinary.service.js";
 
 const createTaskActivity = async ({ task, project, organization, user, action, metadata = {}, session }) => {
   const payload = [
@@ -27,6 +30,18 @@ const createTaskActivity = async ({ task, project, organization, user, action, m
   await TaskActivity.create(payload);
 };
 
+const getResourceType = (mimeType = "") => {
+  if (mimeType.startsWith("image/")) {
+    return "image";
+  }
+
+  if (mimeType.startsWith("video/")) {
+    return "video";
+  }
+
+  return "raw";
+};
+
 const canManageAttachment = (req, attachment) => {
   const isOrgAdmin = ["owner", "admin"].includes(req.organizationMembership?.role);
   const isProjectManager = req.projectMembership?.role === "manager";
@@ -40,7 +55,14 @@ export const uploadAttachment = asyncHandler(async (req, res) => {
     throw new ApiError(400, "File is required");
   }
 
-  const fileUrl = `${req.protocol}://${req.get("host")}/uploads/tasks/${req.file.filename}`;
+  const resourceType = getResourceType(req.file.mimetype);
+
+  const uploadedFile = await uploadBufferToCloudinary({
+    buffer: req.file.buffer,
+    originalName: req.file.originalname,
+    mimeType: req.file.mimetype,
+    folder: `devcollab/tasks/${req.task._id}`
+  });
 
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -54,11 +76,14 @@ export const uploadAttachment = asyncHandler(async (req, res) => {
           organization: req.task.organization,
           uploadedBy: req.user._id,
           originalName: req.file.originalname,
-          storedName: req.file.filename,
+          storedName: uploadedFile.original_filename || req.file.originalname,
           mimeType: req.file.mimetype,
           size: req.file.size,
-          path: req.file.path,
-          url: fileUrl
+          path: "",
+          url: uploadedFile.secure_url,
+          provider: "cloudinary",
+          publicId: uploadedFile.public_id,
+          resourceType
         }
       ],
       { session }
@@ -74,7 +99,8 @@ export const uploadAttachment = asyncHandler(async (req, res) => {
         attachmentId: attachment._id,
         originalName: attachment.originalName,
         mimeType: attachment.mimeType,
-        size: attachment.size
+        size: attachment.size,
+        provider: "cloudinary"
       },
       session
     });
@@ -94,9 +120,10 @@ export const uploadAttachment = asyncHandler(async (req, res) => {
     await session.abortTransaction();
     session.endSession();
 
-    if (req.file?.path) {
-      await fs.unlink(req.file.path).catch(() => null);
-    }
+    await deleteFromCloudinary({
+      publicId: uploadedFile.public_id,
+      resourceType
+    }).catch(() => null);
 
     throw error;
   }
@@ -151,7 +178,8 @@ export const deleteAttachment = asyncHandler(async (req, res) => {
       action: "attachment_deleted",
       metadata: {
         attachmentId: attachment._id,
-        originalName: attachment.originalName
+        originalName: attachment.originalName,
+        provider: attachment.provider
       },
       session
     });
@@ -159,7 +187,12 @@ export const deleteAttachment = asyncHandler(async (req, res) => {
     await session.commitTransaction();
     session.endSession();
 
-    await fs.unlink(attachment.path).catch(() => null);
+    if (attachment.provider === "cloudinary") {
+      await deleteFromCloudinary({
+        publicId: attachment.publicId,
+        resourceType: attachment.resourceType
+      }).catch(() => null);
+    }
 
     return res.status(200).json(new ApiResponse(200, {}, "Attachment deleted successfully"));
   } catch (error) {

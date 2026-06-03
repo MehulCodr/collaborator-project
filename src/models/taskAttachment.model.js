@@ -46,11 +46,25 @@ const taskAttachmentSchema = new mongoose.Schema(
     },
     path: {
       type: String,
-      required: true
+      default: ""
     },
     url: {
       type: String,
       required: true
+    },
+    provider: {
+      type: String,
+      enum: ["cloudinary", "local"],
+      default: "cloudinary"
+    },
+    publicId: {
+      type: String,
+      default: ""
+    },
+    resourceType: {
+      type: String,
+      enum: ["image", "video", "raw"],
+      default: "raw"
     },
     isDeleted: {
       type: Boolean,

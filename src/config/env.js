@@ -17,7 +17,10 @@ const requiredEnvVars = [
   "OPENAI_API_KEY",
   "GITHUB_TOKEN_ENCRYPTION_SECRET",
   "GITHUB_WEBHOOK_SECRET",
-  "OPENAI_EMBEDDING_MODEL"
+  "OPENAI_EMBEDDING_MODEL",
+  "CLOUDINARY_CLOUD_NAME",
+  "CLOUDINARY_API_KEY",
+  "CLOUDINARY_API_SECRET"
 ];
 
 requiredEnvVars.forEach((key) => {
@@ -43,5 +46,8 @@ export const env = {
   openaiApiKey: process.env.OPENAI_API_KEY,
   openaiModel: process.env.OPENAI_MODEL || "gpt-4o-mini",
   githubWebhookSecret: process.env.GITHUB_WEBHOOK_SECRET,
-  openaiEmbeddingModel: process.env.OPENAI_EMBEDDING_MODEL || "text-embedding-3-small"
+  openaiEmbeddingModel: process.env.OPENAI_EMBEDDING_MODEL || "text-embedding-3-small",
+  cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME,
+  cloudinaryApiKey: process.env.CLOUDINARY_API_KEY,
+  cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET
 };

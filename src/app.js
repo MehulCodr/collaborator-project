@@ -51,7 +51,6 @@ app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(cookieParser());
 app.use(morgan(env.nodeEnv === "development" ? "dev" : "combined"));
 app.use(limiter);
-app.use("/uploads", express.static("uploads"));
 
 app.use("/api/v1/health", healthRoutes);
 app.use("/api/v1/auth", authRoutes);
