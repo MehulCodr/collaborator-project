@@ -20,6 +20,8 @@ import githubRoutes from "./routes/github.routes.js";
 import githubWebhookRoutes from "./routes/githubWebhook.routes.js";
 import aiRoutes from "./routes/ai.routes.js";
 import ragRoutes from "./routes/rag.routes.js";
+import developerProfileRoutes from "./routes/developerProfile.routes.js";
+import matchingRoutes from "./routes/matching.routes.js";
 
 const app = express();
 
@@ -80,6 +82,8 @@ app.use("/api/v1/notifications", notificationRoutes);
 app.use("/api/v1/github", githubRoutes);
 app.use("/api/v1/rag", ragRoutes);
 app.use("/api/v1/analytics", analyticsRoutes);
+app.use("/api/v1/developer-profile", developerProfileRoutes);
+app.use("/api/v1/matching", matchingRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
