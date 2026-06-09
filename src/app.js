@@ -22,6 +22,7 @@ import aiRoutes from "./routes/ai.routes.js";
 import ragRoutes from "./routes/rag.routes.js";
 import developerProfileRoutes from "./routes/developerProfile.routes.js";
 import matchingRoutes from "./routes/matching.routes.js";
+import complexityRoutes from "./routes/complexity.routes.js";
 
 const app = express();
 
@@ -84,6 +85,7 @@ app.use("/api/v1/rag", ragRoutes);
 app.use("/api/v1/analytics", analyticsRoutes);
 app.use("/api/v1/developer-profile", developerProfileRoutes);
 app.use("/api/v1/matching", matchingRoutes);
+app.use("/api/v1", complexityRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

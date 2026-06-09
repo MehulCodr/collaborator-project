@@ -21,6 +21,7 @@ const requiredEnvVars = [
   "CLOUDINARY_CLOUD_NAME",
   "CLOUDINARY_API_KEY",
   "CLOUDINARY_API_SECRET"
+  // GEMINI_API_KEY is optional — falls back to heuristic-only if absent
 ];
 
 requiredEnvVars.forEach((key) => {
@@ -49,5 +50,6 @@ export const env = {
   openaiEmbeddingModel: process.env.OPENAI_EMBEDDING_MODEL || "text-embedding-3-small",
   cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME,
   cloudinaryApiKey: process.env.CLOUDINARY_API_KEY,
-  cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET
+  cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET,
+  geminiApiKey: process.env.GEMINI_API_KEY || null
 };
